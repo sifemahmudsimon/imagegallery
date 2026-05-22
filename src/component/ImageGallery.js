@@ -2,7 +2,11 @@ import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardBody, Button } from "reactstrap";
 import { BiImage } from "react-icons/bi";
 
-import { DndContext, closestCenter } from "@dnd-kit/core";
+import {
+  DndContext,
+  closestCenter,
+} from "@dnd-kit/core";
+
 import {
   SortableContext,
   arrayMove,
@@ -79,22 +83,23 @@ const SortableImage = ({
 const ImagesGallery = () => {
   const [images, setImages] = useState([]);
   const [hoveredIndex, setHoveredIndex] = useState(null);
-
   const [isDraggingFile, setIsDraggingFile] = useState(false);
 
-  /* ================= LOAD DEFAULT ================= */
-
-  const importAll = (r) => r.keys().map(r);
-  const imageFiles = importAll(
-    require.context("../assets/image", false, /\.(png|jpe?g|gif|svg|webp)$/)
-  );
+  /* ================= LOAD DEFAULT IMAGES ================= */
 
   useEffect(() => {
+    const importAll = (r) => r.keys().map(r);
+
+    const imageFiles = importAll(
+      require.context("../assets/image", false, /\.(png|jpe?g|gif|svg|webp)$/)
+    );
+
     const initial = imageFiles.map((img, i) => ({
       src: img,
       key: `img-${i}`,
       selected: false,
     }));
+
     setImages(initial);
   }, []);
 
@@ -122,7 +127,8 @@ const ImagesGallery = () => {
 
   const selectedCount = images.filter((i) => i.selected).length;
 
-  const allSelected = images.length > 0 && images.every((img) => img.selected);
+  const allSelected =
+    images.length > 0 && images.every((img) => img.selected);
 
   const toggleSelectAll = () => {
     setImages((prev) =>
@@ -146,7 +152,7 @@ const ImagesGallery = () => {
       selected: false,
     }));
 
-    // ✅ ADD AT LAST (FIXED)
+    // ADD AT END (IMPORTANT)
     setImages((prev) => [...prev, ...newImages]);
   };
 
@@ -155,7 +161,7 @@ const ImagesGallery = () => {
     e.target.value = "";
   };
 
-  /* ================= DROP ZONE ================= */
+  /* ================= DROPZONE ================= */
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -176,11 +182,19 @@ const ImagesGallery = () => {
 
   return (
     <div className="d-flex justify-content-center align-items-center min-vh-100 bg-secondary">
+
       <Card style={{ maxWidth: "70%", width: "100%" }}>
+
         <CardHeader className="d-flex justify-content-between align-items-center">
-          <h3>{selectedCount > 0 ? `${selectedCount} Selected` : "Gallery"}</h3>
+
+          <h3>
+            {selectedCount > 0
+              ? `${selectedCount} Selected`
+              : "Gallery"}
+          </h3>
 
           <div className="d-flex gap-2">
+
             <Button color="secondary" onClick={toggleSelectAll}>
               {allSelected ? "Unselect All" : "Select All"}
             </Button>
@@ -190,10 +204,12 @@ const ImagesGallery = () => {
                 Delete Selected
               </Button>
             )}
+
           </div>
         </CardHeader>
 
         <CardBody>
+
           {/* hidden input */}
           <input
             type="file"
@@ -205,10 +221,12 @@ const ImagesGallery = () => {
           />
 
           <DndContext onDragEnd={handleDragEnd}>
+
             <SortableContext
               items={images.map((i) => i.key)}
               strategy={rectSortingStrategy}
             >
+
               <div
                 style={{
                   display: "grid",
@@ -217,7 +235,8 @@ const ImagesGallery = () => {
                   gridAutoRows: "1fr",
                 }}
               >
-                {/* ================= IMAGES ================= */}
+
+                {/* IMAGES */}
                 {images.map((img, i) => (
                   <SortableImage
                     key={img.key}
@@ -229,9 +248,11 @@ const ImagesGallery = () => {
                   />
                 ))}
 
-                {/* ================= DROP ZONE ================= */}
+                {/* DROPZONE */}
                 <div
-                  onClick={() => document.getElementById("fileInput").click()}
+                  onClick={() =>
+                    document.getElementById("fileInput").click()
+                  }
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
@@ -246,25 +267,26 @@ const ImagesGallery = () => {
                     justifyContent: "center",
                     alignItems: "center",
                     cursor: "pointer",
-                    background: isDraggingFile ? "#f0f0f0" : "#f8f9fa",
-                    transition: "0.2s",
-                    color: "black",
+                    background: isDraggingFile ? "#f1f1f1" : "#f8f9fa",
                     fontWeight: 500,
                   }}
                 >
                   <BiImage size={30} />
-
-                  {isDraggingFile ? (
-                    <h6 style={{ marginTop: 8 }}>Drop Here</h6>
-                  ) : (
-                    <h6 style={{ marginTop: 8 }}>Add / Drop Image</h6>
-                  )}
+                  <h6>
+                    {isDraggingFile ? "Drop Here" : "Add / Drop Image"}
+                  </h6>
                 </div>
+
               </div>
+
             </SortableContext>
+
           </DndContext>
+
         </CardBody>
+
       </Card>
+
     </div>
   );
 };
