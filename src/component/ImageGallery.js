@@ -1,17 +1,16 @@
-import React, { useState, useEffect } from "react";
-import { Card, CardHeader, CardBody, Button } from "reactstrap";
+import React, { useEffect, useState } from "react";
 import { BiImage } from "react-icons/bi";
+import { Button, Card, CardBody, CardHeader } from "reactstrap";
 
 import {
-  DndContext,
-  closestCenter,
+    DndContext
 } from "@dnd-kit/core";
 
 import {
-  SortableContext,
-  arrayMove,
-  useSortable,
-  rectSortingStrategy,
+    SortableContext,
+    arrayMove,
+    rectSortingStrategy,
+    useSortable,
 } from "@dnd-kit/sortable";
 
 import { CSS } from "@dnd-kit/utilities";
