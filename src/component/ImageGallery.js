@@ -1,141 +1,272 @@
-//React Component Importing
-import React, { useState } from 'react';
-import { Card, CardHeader, CardBody, Button } from 'reactstrap';
-import { DragDropContext, Droppable } from 'react-beautiful-dnd';
-import { FaCheckSquare } from "react-icons/fa";
+import React, { useState, useEffect } from "react";
+import { Card, CardHeader, CardBody, Button } from "reactstrap";
 import { BiImage } from "react-icons/bi";
 
-//Importing Custom Compoenent
-import ImageList from './ImageList';
+import { DndContext, closestCenter } from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
 
+import { CSS } from "@dnd-kit/utilities";
 
+/* ================= SORTABLE IMAGE ================= */
+
+const SortableImage = ({
+  image,
+  index,
+  hoveredIndex,
+  setHoveredIndex,
+  toggleSelect,
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({ id: image.key });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+
+    gridColumn: index === 0 ? "span 2" : "span 1",
+    gridRow: index === 0 ? "span 2" : "span 1",
+
+    borderRadius: "12px",
+    overflow: "hidden",
+    position: "relative",
+    aspectRatio: "1 / 1",
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onMouseEnter={() => setHoveredIndex(index)}
+      onMouseLeave={() => setHoveredIndex(null)}
+    >
+      <input
+        type="checkbox"
+        checked={image.selected}
+        onChange={() => toggleSelect(image.key)}
+        onPointerDown={(e) => e.stopPropagation()}
+        style={{
+          position: "absolute",
+          top: 10,
+          left: 10,
+          zIndex: 2,
+        }}
+      />
+
+      <img
+        src={image.src}
+        alt={image.alt}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          display: "block",
+          filter: hoveredIndex === index ? "brightness(0.5)" : "none",
+        }}
+      />
+    </div>
+  );
+};
+
+/* ================= MAIN ================= */
 
 const ImagesGallery = () => {
+  const [images, setImages] = useState([]);
+  const [hoveredIndex, setHoveredIndex] = useState(null);
 
-    // Define state variables for managing images and their selection
-    const [images, setImages] = useState([]);
-    const [selectedImages, setSelectedImages] = useState([]);
-    const [hoveredIndex, setHoveredIndex] = useState(null);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
 
-    // Function to import image files from a specified directory
-    const importAll = (r) => r.keys().map(r);
-    const imageFiles = importAll(require.context('../assets/image', false, /\.(png|jpe?g|gif|svg|webp)$/));
+  /* ================= LOAD DEFAULT ================= */
 
-    // Initialize images if they are not loaded
-    if (images.length === 0) {
-        const initialImages = imageFiles.map((imageFile, index) => ({
-            src: imageFile,
-            alt: `Image ${index}`,
-            key: `image-${index}`,
-            // boolean statement for image checkbox
-            selected: false,
-        }));
-        //setting initial loaded image as a list 
-        setImages(initialImages);
-    }
+  const importAll = (r) => r.keys().map(r);
+  const imageFiles = importAll(
+    require.context("../assets/image", false, /\.(png|jpe?g|gif|svg|webp)$/)
+  );
 
-    // Function to toggle the selection of an image
+  useEffect(() => {
+    const initial = imageFiles.map((img, i) => ({
+      src: img,
+      key: `img-${i}`,
+      selected: false,
+    }));
+    setImages(initial);
+  }, []);
 
-    const toggleSelect = (index) => {
+  /* ================= DRAG REORDER ================= */
 
-        // copy of images array to avoid mutating the original
-        // Toggle the selected (boolean) property of the image at the specified index
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
 
-        const updatedImages = [...images];
-        updatedImages[index].selected = !updatedImages[index].selected;
-        setImages(updatedImages);
+    const oldIndex = images.findIndex((i) => i.key === active.id);
+    const newIndex = images.findIndex((i) => i.key === over.id);
 
-        //filtering images to sent to SelectedImage Array
-        if (updatedImages[index].selected) {
-            setSelectedImages([...selectedImages, updatedImages[index]]);
-        } else {
-            setSelectedImages(selectedImages.filter(image => image.key !== updatedImages[index].key));
-        }
-    };
+    setImages(arrayMove(images, oldIndex, newIndex));
+  };
 
-    // Function to handle image hover to show Checkbox & effects
-    const handleImageHover = (index) => {
-        setHoveredIndex(index);
-    };
+  /* ================= SELECT ================= */
 
-    // Function called when an image is dragged and dropped
-    const onDragEnd = (result) => {
-        if (!result.destination) {
-            return;
-        }
-        const reorderedImages = Array.from(images);
-        const [removed] = reorderedImages.splice(result.source.index, 1);
-        reorderedImages.splice(result.destination.index, 0, removed);
-
-        setImages(reorderedImages);
-    };
-
-    // Function to handle image deletion by filtering out images that are not selected
-    const handleDelete = () => {
-        const updatedImages = images.filter((image) => !image.selected);
-        setImages(updatedImages);
-        setSelectedImages([]);
-    };
-
-    return (
-        
-        <div className='d-flex justify-content-center align-items-center min-vh-100 bg-secondary'>            
-            <Card style={{
-                maxWidth: '70%',
-                width: '100%',
-            }}>
-                <CardHeader className='py-3 d-flex justify-content-between'>
-                {/* If images are selected, display the number of selected files or Just Show Gallery word */}
-                    <h3>
-                        {selectedImages.length > 0
-                            ? 
-                            <span> 
-                                <FaCheckSquare className='text-primary'/> 
-                                {selectedImages.length} Files Selected
-                            </span>
-                            : 'Gallery'}
-                    </h3>
-                    {/* Render Delete Button if any image is selected */}
-                    {selectedImages.length > 0 && (
-                        <Button className='btn btn-light btn-outline-danger' onClick={handleDelete}>Delete</Button>
-                    )}
-                </CardHeader>
-                <CardBody>
-                    <DragDropContext onDragEnd={onDragEnd}>
-                        <Droppable droppableId="image-list" direction="horizontal">
-                            {(provided) => (
-                                <ul
-                                    ref={provided.innerRef}
-                                    style={{
-                                        display: 'grid',
-                                        gridTemplateColumns: 'repeat(5, 1fr)',
-                                        gridGap: '1.2rem',
-                                        listStyle: 'none',
-                                        padding: 0,
-                                    }}
-                                >
-                                    {/* Imported Custom made component of the image list */}
-                                    <ImageList 
-                                    //Passing props to ImageList component
-                                    images={images} 
-                                    toggleSelect={toggleSelect} 
-                                    handleImageHover={handleImageHover} 
-                                    hoveredIndex={hoveredIndex} />
-
-                                    {/* Button to add More image */}
-                                    <Button className="btn btn-light d-flex flex-column justify-content-center align-items-center"
-                                        style={{ border: '1px dashed lightgrey', borderRadius: '10px'}}>
-                                        <BiImage size={30}/>
-                                        <h6>Add Image</h6>
-                                    </Button>
-                                </ul>
-                            )}
-                        </Droppable>
-                    </DragDropContext>
-                </CardBody>
-            </Card>
-        </div>
+  const toggleSelect = (key) => {
+    setImages((prev) =>
+      prev.map((img) =>
+        img.key === key ? { ...img, selected: !img.selected } : img
+      )
     );
+  };
+
+  const selectedCount = images.filter((i) => i.selected).length;
+
+  const allSelected = images.length > 0 && images.every((img) => img.selected);
+
+  const toggleSelectAll = () => {
+    setImages((prev) =>
+      prev.map((img) => ({
+        ...img,
+        selected: !allSelected,
+      }))
+    );
+  };
+
+  const handleDelete = () => {
+    setImages((prev) => prev.filter((img) => !img.selected));
+  };
+
+  /* ================= ADD IMAGE ================= */
+
+  const handleFiles = (files) => {
+    const newImages = Array.from(files).map((file, i) => ({
+      src: URL.createObjectURL(file),
+      key: `new-${Date.now()}-${i}`,
+      selected: false,
+    }));
+
+    // ✅ ADD AT LAST (FIXED)
+    setImages((prev) => [...prev, ...newImages]);
+  };
+
+  const handleFileInput = (e) => {
+    handleFiles(e.target.files);
+    e.target.value = "";
+  };
+
+  /* ================= DROP ZONE ================= */
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDraggingFile(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDraggingFile(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDraggingFile(false);
+    handleFiles(e.dataTransfer.files);
+  };
+
+  /* ================= UI ================= */
+
+  return (
+    <div className="d-flex justify-content-center align-items-center min-vh-100 bg-secondary">
+      <Card style={{ maxWidth: "70%", width: "100%" }}>
+        <CardHeader className="d-flex justify-content-between align-items-center">
+          <h3>{selectedCount > 0 ? `${selectedCount} Selected` : "Gallery"}</h3>
+
+          <div className="d-flex gap-2">
+            <Button color="secondary" onClick={toggleSelectAll}>
+              {allSelected ? "Unselect All" : "Select All"}
+            </Button>
+
+            {selectedCount > 0 && (
+              <Button color="danger" onClick={handleDelete}>
+                Delete Selected
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+
+        <CardBody>
+          {/* hidden input */}
+          <input
+            type="file"
+            multiple
+            accept="image/*"
+            style={{ display: "none" }}
+            id="fileInput"
+            onChange={handleFileInput}
+          />
+
+          <DndContext onDragEnd={handleDragEnd}>
+            <SortableContext
+              items={images.map((i) => i.key)}
+              strategy={rectSortingStrategy}
+            >
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(5, 1fr)",
+                  gap: "1.2rem",
+                  gridAutoRows: "1fr",
+                }}
+              >
+                {/* ================= IMAGES ================= */}
+                {images.map((img, i) => (
+                  <SortableImage
+                    key={img.key}
+                    image={img}
+                    index={i}
+                    hoveredIndex={hoveredIndex}
+                    setHoveredIndex={setHoveredIndex}
+                    toggleSelect={toggleSelect}
+                  />
+                ))}
+
+                {/* ================= DROP ZONE ================= */}
+                <div
+                  onClick={() => document.getElementById("fileInput").click()}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  style={{
+                    border: isDraggingFile
+                      ? "2px dashed black"
+                      : "1px dashed lightgrey",
+                    borderRadius: "10px",
+                    aspectRatio: "1 / 1",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    cursor: "pointer",
+                    background: isDraggingFile ? "#f0f0f0" : "#f8f9fa",
+                    transition: "0.2s",
+                    color: "black",
+                    fontWeight: 500,
+                  }}
+                >
+                  <BiImage size={30} />
+
+                  {isDraggingFile ? (
+                    <h6 style={{ marginTop: 8 }}>Drop Here</h6>
+                  ) : (
+                    <h6 style={{ marginTop: 8 }}>Add / Drop Image</h6>
+                  )}
+                </div>
+              </div>
+            </SortableContext>
+          </DndContext>
+        </CardBody>
+      </Card>
+    </div>
+  );
 };
 
 export default ImagesGallery;
